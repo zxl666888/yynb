@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="zh-ch">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-key="title">PUBG 自定义矩形蓝圈工具</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+        }
+        .container {
+            min-width: 600px !important;
+            height: 100% !important;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        #options {
+            padding: 15px 22px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            overflow-y: auto;
+            width: 330px;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            width: auto;
+        }
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .table {
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 1rem;
+            background-color: transparent;
+            border-collapse: collapse;
+            border: 1px solid #dee2e6;
+            table-layout: fixed;
+        }
+        .table th, .table td {
+            border: 1px solid #dee2e6;
+            padding: .3rem;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .dark-mode #options {
+            background-color: #1e1e1e;
+        }
+        .dark-mode .table {
+            color: #e0e0e0;
+        }
+        .form-select {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            border-radius: .375rem;
+        }
+        .text-center {
+            text-align: center !important;
+        }
+        .mb-3 {
+            margin-bottom: 1rem !important;
+        }
+        .options-group {
+            margin-top: 32px;
+        }
+        #options label {
+            line-height: 26px;
+        }
+
+        #selection-coordinates input{
+            width: 55px;
+        }
+
+        #show-distance{
+            display: inline-block;
+            padding: 5px 10px;
+            position: absolute;
+            left: 0;top: 0;
+            background: #eeeeee40;
+            border: 1px solid #ccc;
+            color: #000;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+<div class="container">
+    <div id="options">
+        <div class="options-group">
+            <h3 class="text-center" data-key="map">地图</h3>
+            <select id="select-maps" class="form-select">
+                <option value="Erangel">艾伦格</option>
+                <option value="Sanhok">萨诺</option>
+                <option value="Miramar">米拉玛</option>
+                <option value="Vikendi">维塞迪</option>
+                <option value="Taego">泰戈</option>
+                <option value="Deston">帝斯顿</option>
+                <option value="Rondo">荣都</option>
+                <option value="Paramo">帕拉莫</option>
+                <option value="Karakin">卡拉金</option>
+                <option value="Haven">褐湾</option>
+            </select>
+        </div>
+        <div class="options-group">
+            <h3 class="text-center" data-key="selectionCoordinates">选区坐标</h3>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>X1(左)</th>
+                    <th>Y1(上)</th>
+                    <th>X2(右)</th>
+                    <th>Y2(下)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr id="selection-coordinates">
+                    <td><input id="X1" type="number" step="0.01" min="0" value="0.00"/></td>
+                    <td><input id="Y1" type="number" step="0.01" min="0" value="0.00"/></td>
+                    <td><input id="X2" type="number" step="0.01" min="0" value="0.00"/></td>
+                    <td><input id="Y2" type="number" step="0.01" min="0" value="0.00"/></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="options-group">
+            <h3 class="text-center" data-key="rectangleArea">选区大小</h3>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th data-key="accuracy">精度</th>
+                    <th data-key="width">宽</th>
+                    <th data-key="height">高</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr id="selection-size"><td>80m</td><td>0m</td><td>0m</td></tr>
+                <tr>
+                    <th data-key="area">面积</th>
+                    <td colspan="2"><span id="area">0</span>m²</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="options-group">
+            <h3 class="text-center" data-key="instructions">操作说明</h3>
+            <table class="table" style="font-size: 15px; table-layout: auto;">
+                <tbody>
+                <tr>
+                    <th data-key="leftButton">左键
+                    </th><td data-key="leftButtonAction">拖动移动地图</td>
+                </tr>
+                <tr>
+                    <th data-key="rightButton">右键
+                    </th><td data-key="rightButtonAction">拖动绘制选区</td>
+                </tr>
+                <tr>
+                    <th data-key="wheel">滚轮
+                    </th><td data-key="wheelAction">放大/缩小地图</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="options-group">
+
+            <div class="form-group">
+                <div class="form-label">
+                    <span data-key="colorMode">颜色模式</span>:
+                </div>
+                <div class="btn-group" id="colorModeGroup">
+                    <input type="radio" id="colorModeSystem" name="colorMode" value="auto" checked="">
+                    <label for="colorModeSystem" data-key="colorModeSystem">自动</label>
+
+                    <input type="radio" id="colorModeLight" name="colorMode" value="light">
+                    <label for="colorModeLight" data-key="colorModeLight">浅色</label>
+
+                    <input type="radio" id="colorModeDark" name="colorMode" value="dark">
+                    <label for="colorModeDark" data-key="colorModeDark">深色</label>
+                </div>
+            </div>
+
+        </div>
+        <div class="options-group">
+            <div class="form-group">
+                <div class="form-label">
+                    <span>测距模式</span>:
+                </div>
+                <div class="btn-group" id = "distance">
+                    <input type="radio" name="distance" id="distanceClone" value="0">
+                    <label for="distanceClone">关闭</label>
+
+                    <input type="radio" name="distance" id="distanceOpen" value="1" checked="">
+                    <label for="distanceOpen">开启</label>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="canvas-container">
+        <canvas id="canvas" width="1189" height="761"></canvas>
+    </div>
+
+    <div id="show-distance">距离: 0.00</div>
+</div>
+</body>
+<script>
+    const mapURLs = {
+        "Erangel": "./map/Erangel.jpg",
+        "Sanhok": "./map/Sanhok.jpg",
+        "Miramar": "./map/Miramar.jpg",
+        "Vikendi": "./map/Vikendi.jpg",
+        "Taego": "./map/Taego.jpg",
+        "Deston": "./map/Deston.jpg",
+        "Rondo": "./map/Rondo.jpg",
+        "Paramo": "./map/Paramo.jpg",
+        "Karakin": "./map/Karakin.jpg",
+        "Haven": "./map/Haven.jpg"
+    };
+
+    const mapSizes = {
+        "Erangel": 8000,
+        "Sanhok": 4000,
+        "Miramar": 8000,
+        "Vikendi": 8000,
+        "Taego": 8000,
+        "Deston": 8000,
+        "Rondo": 8000,
+        "Paramo": 3000,
+        "Karakin": 2000,
+        "Haven": 1000
+    };
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const selectMaps = document.getElementById('select-maps');
+    const selectionCoordinates = document.getElementById('selection-coordinates');
+    const selectionSize = document.getElementById('selection-size');
+    const canvasContainer = document.getElementById('canvas-container');
+    const area = document.getElementById("area");
+    const distance = document.getElementById("distance");
+    const inputX1 = document.getElementById("X1");
+    const inputY1 = document.getElementById("Y1");
+    const inputX2 = document.getElementById("X2");
+    const inputY2 = document.getElementById("Y2");
+    const distanceDisplay = document.getElementById('show-distance');
+
+    let inputX1Value = 0.00;
+    let inputY1Value = 0.00;
+    let inputX2Value = 0.00;
+    let inputY2Value = 0.00;
+
+    let img = new Image();
+    let scale = 1;
+    let initialScale = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let startX, startY, selectionStartX, selectionStartY, selectionEndX, selectionEndY;
+    let isDragging = false;
+    let isSelecting = false;
+    let selectionRect = null;
+    let mapSize, accuracy = 0;
+    const minScale = 0.5;
+    const maxScale = 10;
+
+    let isDistance = true;
+    let hasStartPoint = false; // 是否已经点击画布设置起始点
+    let distanceStartX = 0, distanceStartY = 0; // 起始点坐标
+    function reset() {
+        console.log("Reset")
+        mapSize = mapSizes[selectMaps.value];
+        accuracy = mapSize / 100;
+        area.innerText = 0;
+        inputX1.value = 0.00;
+        inputY1.value = 0.00;
+        inputX2.value = 0.00;
+        inputY2.value = 0.00;
+        /*selectionCoordinates.innerHTML = `<td><input id="X1" type="number" step="0.01" min="0" value="0.00"/></td>
+                                         <td><input id="Y1" type="number" step="0.01" min="0" value="0.00"/></td>
+                                         <td><input id="X2" type="number" step="0.01" min="0" value="0.00"/></td>
+                                         <td><input id="Y2" type="number" step="0.01" min="0" value="0.00"/></td>`;
+*/
+        selectionSize.innerHTML = `<td>${accuracy}m</td><td>0m</td><td>0m</td>`;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+        if (selectionRect) {
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2 / scale;
+            ctx.strokeRect(
+                selectionRect.x * img.width,
+                selectionRect.y * img.height,
+                selectionRect.width * img.width,
+                selectionRect.height * img.height
+            );
+        }
+
+        if(hasStartPoint){
+            drawPoint(distanceStartX, distanceStartY);
+        }
+        ctx.restore();
+    }
+
+
+    function handleImageChange() {
+        console.log("handleImageChange")
+        img.src = mapURLs[selectMaps.value];
+        img.onload = function () {
+            selectionRect = null;
+            initialScale = canvasContainer.clientHeight / img.height;
+            scale = initialScale;
+            offsetX = (canvasContainer.clientWidth - img.width * scale) / 2;
+            offsetY = 0;
+            resizeCanvas();
+            draw();
+        };
+        reset();
+    }
+
+    function resizeCanvas() {
+        console.log("窗口大小发生变化")
+        canvas.width = canvasContainer.clientWidth;
+        canvas.height = canvasContainer.clientHeight;
+        draw();
+    }
+
+    function changeCoordinates(){
+
+        console.log("changeCoordinates")
+        let x1 = inputX1.value;
+        let y1 = inputY1.value;
+        let x2 = inputX2.value;
+        let y2 = inputY2.value;
+
+        console.log(x1, y1, x2, y2)
+        if (x2 <= x1 || y2 <= y1){
+            inputX1.value = inputX1Value;
+            inputX2.value = inputX2Value;
+            inputY1.value = inputY1Value;
+            inputY2.value = inputY2Value;
+            console.log("error")
+            return;
+        }
+
+        inputX1Value = x1;
+        inputX2Value = x2;
+        inputY1Value = y1;
+        inputY2Value = y2;
+
+        selectionRect = {
+            x: x1,
+            y: y1,
+            width: x2 - x1,
+            height: y2 - y1
+        };
+
+        const width = ((x2 - x1) * mapSize).toFixed(0);
+        const height = ((y2 - y1) * mapSize).toFixed(0);
+
+        selectionSize.innerHTML = `<td>${accuracy}m</td><td>${width}m</td><td>${height}m</td>`;
+        area.innerText = width * height;
+
+        draw();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    canvas.addEventListener('mousedown', function (e) {
+        const mouseX = e.clientX - canvasContainer.offsetLeft;
+        const mouseY = e.clientY - canvasContainer.offsetTop;
+       if (e.button === 0) {
+            isDragging = true;
+            startX = mouseX - offsetX;
+            startY = mouseY - offsetY;
+        } else if (e.button === 2) {
+           if(isDistance == 1){
+               draw();
+               if(!hasStartPoint){
+                   const rect = canvas.getBoundingClientRect();
+                   distanceStartX = event.clientX - rect.left;
+                   distanceStartY = event.clientY - rect.top;
+                   drawPoint(distanceStartX, distanceStartY);
+                   hasStartPoint = true;
+                   distanceDisplay.textContent = `距离: 0.00 m`;
+                   distanceDisplay.style.display = "inline-block";
+                   distanceDisplay.style.left = event.clientX +20 + "px";
+                   distanceDisplay.style.top = event.clientY -20 + "px";
+               }else{
+                   hasStartPoint = false;
+                   distanceDisplay.style.display = "none";
+               }
+
+           }else{
+               isSelecting = true;
+               selectionStartX = mouseX;
+               selectionStartY = mouseY;
+               selectionRect = null;
+           }
+        }
+    });
+
+    canvas.addEventListener('mousemove', function (e) {
+        const mouseX = e.clientX - canvasContainer.offsetLeft;
+        const mouseY = e.clientY - canvasContainer.offsetTop;
+        if(isDistance && hasStartPoint){
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            // 清除画布
+            draw();
+
+            // 重新绘制起始点
+            drawPoint(distanceStartX, distanceStartY);
+
+            // 绘制起始点与鼠标位置之间的连线
+            drawLine(distanceStartX, distanceStartY, mouseX, mouseY);
+
+            // 计算并显示距离
+            const distance = calculateDistance(distanceStartX, distanceStartY, mouseX, mouseY);
+            distanceDisplay.textContent = `距离: ${distance.toFixed(2)} m`;
+
+            distanceDisplay.style.left = event.clientX + 20 + "px";
+            distanceDisplay.style.top = event.clientY - 20 + "px";
+
+        }else if (isDragging) {
+            offsetX = mouseX - startX;
+            offsetY = mouseY - startY;
+            draw();
+        } else if (isSelecting) {
+            selectionEndX = mouseX;
+            selectionEndY = mouseY;
+
+            let startX = Math.min(selectionStartX, selectionEndX);
+            let startY = Math.min(selectionStartY, selectionEndY);
+            let endX = Math.max(selectionStartX, selectionEndX);
+            let endY = Math.max(selectionStartY, selectionEndY);
+
+            let x1 = (startX - offsetX) / (img.width * scale);
+            let y1 = (startY - offsetY) / (img.height * scale);
+            let x2 = (endX - offsetX) / (img.width * scale);
+            let y2 = (endY - offsetY) / (img.height * scale);
+
+            x1 = Math.max(0, Math.min(1, x1)).toFixed(2);
+            y1 = Math.max(0, Math.min(1, y1)).toFixed(2);
+            x2 = Math.max(0, Math.min(1, x2)).toFixed(2);
+            y2 = Math.max(0, Math.min(1, y2)).toFixed(2);
+
+            inputX1.value = inputX1Value = x1;
+            inputY1.value = inputY1Value = y1;
+            inputX2.value = inputX2Value = x2;
+            inputY2.value = inputY2Value = y2;
+            /*selectionCoordinates.innerHTML = `<td>${x1}</td><td>${y1}</td><td>${x2}</td><td>${y2}</td>`;*/
+
+            selectionRect = {
+                x: x1,
+                y: y1,
+                width: x2 - x1,
+                height: y2 - y1
+            };
+
+            const width = ((x2 - x1) * mapSize).toFixed(0);
+            const height = ((y2 - y1) * mapSize).toFixed(0);
+
+            selectionSize.innerHTML = `<td>${accuracy}m</td><td>${width}m</td><td>${height}m</td>`;
+            area.innerText = width * height;
+
+            draw();
+        }
+    });
+
+    canvas.addEventListener('mouseup', function (e) {
+        if (e.button === 0) {
+            isDragging = false;
+        } else if (e.button === 2) {
+            isSelecting = false;
+        }
+    });
+    // 禁用右键菜单
+    canvas.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+    });
+    // 滚轮缩放
+    canvas.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        const mouseX = e.clientX - canvasContainer.offsetLeft;
+        const mouseY = e.clientY - canvasContainer.offsetTop;
+        const zoom = e.deltaY > 0 ? 0.9 : 1.1;
+        const newScale = scale * zoom;
+        const newOffsetX = mouseX - (mouseX - offsetX) * (newScale / scale);
+        const newOffsetY = mouseY - (mouseY - offsetY) * (newScale / scale);
+
+
+        distanceStartX = mouseX - (mouseX - distanceStartX) * (newScale / scale);
+        distanceStartY = mouseY - (mouseY - distanceStartY) * (newScale / scale);
+        offsetX = newOffsetX;
+        offsetY = newOffsetY;
+        scale = newScale;
+
+        draw();
+    });
+
+    selectMaps.addEventListener('change', handleImageChange);
+
+    inputX1.addEventListener('input', changeCoordinates);
+    inputY1.addEventListener('input', changeCoordinates);
+    inputX2.addEventListener('input', changeCoordinates);
+    inputY2.addEventListener('input', changeCoordinates);
+    handleImageChange();
+
+    /* 国际化 */
+    // 页面默认语言
+    const defaultLanguage = document.documentElement.lang;
+
+
+    /* 颜色模式切换  */
+    const systemDarkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    // 系统颜色模式 (light|dark)
+    let systemColorMode;
+    // 设置的颜色模式 (auto|light|dark)，默认dark
+    let colorMode = localStorage.getItem('theme') || 'dark';
+    // 最终使用的颜色模式 (light|dark)
+    let useColorMode;
+    // 更新页面颜色模式
+    function updateColorMode() {
+        systemColorMode = systemDarkModeQuery.matches ? 'dark' : 'light';
+        useColorMode = colorMode === 'auto' ? systemColorMode : colorMode;
+        console.log(`systemColorMode: ${systemColorMode}`);
+        console.log(`colorMode: ${colorMode}`);
+        console.log(`useColorMode: ${useColorMode}`);
+        if (useColorMode === 'dark') {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+    }
+    updateColorMode();
+    document.querySelector(`input[value=${colorMode}]`).checked = true;
+    // 颜色模式更改事件
+    document.getElementById('colorModeGroup').addEventListener('change', function(event) {
+        if (event.target.name === 'colorMode') {
+            colorMode = event.target.value;
+            localStorage.setItem('theme', colorMode);
+            updateColorMode();
+        }
+    });
+    // 系统颜色模式更改事件
+    systemDarkModeQuery.addEventListener('change', function() {
+        updateColorMode();
+    });
+
+    ////////////////////////////////////////////////
+    distance.addEventListener('change', function (event){
+        isDistance =  event.target.value == 1;
+        if(!isDistance){
+            hasStartPoint = false;
+            distanceDisplay.style.display = "none";
+        }else{
+            selectionRect = false;
+        }
+        draw();
+    });
+
+    // 绘制一个点
+    function drawPoint(x, y) {
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI); // 画一个半径为3的圆
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    }
+
+    // 绘制线条
+    function drawLine(x1, y1, x2, y2) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = 'white'; // 白色线条
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    // 计算两点之间的距离
+    function calculateDistance(x1, y1, x2, y2) {
+        const dx =(x2 - x1)/(img.width * scale);
+
+        const dy = (y2 - y1)/(img.width * scale);
+        const width = (dx * mapSize).toFixed(0);
+        const height = (dy * mapSize).toFixed(0);
+        return Math.sqrt(width*width + height*height); // 使用勾股定理
+    }
+</script>
+</html>
