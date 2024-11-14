@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>左右布局</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .left {
+            flex: 7;
+            background-color: #000;
+            padding: 20px;
+            min-height:500px;
+            color: #FFFFFF;
+        }
+
+        .right {
+            flex: 3;
+            background-color: lightgreen;
+            padding: 20px;
+        }
+
+        .popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            background-color: #ececec;
+            border: 1px solid rgb(128, 128, 128);
+            border-radius: 5px;
+            text-align: center;
+            padding: 10px;
+            display: none;
+        }
+
+        table{
+            width: 100%;
+        }
+        table, th, td {
+            border: 2px solid #111111;
+            border-collapse: collapse;
+        }
+        td{
+            width: 200px;
+        }
+        td div{
+            width: 180px;
+            height: 40px;
+            background: #252525;
+            margin:1px;
+            text-align: left; /* 水平居中 */
+            display: flex;
+            align-items: center; /* 垂直居中 */
+            overflow: hidden;
+        }
+        td div span{
+            font-weight: bold;
+            width: 40px;
+            height: 40px;
+            background: #4E4E4E;
+            text-align: center; /* 水平居中 */
+            display: flex;
+            align-items: center; /* 垂直居中 */
+            justify-content: center; /* 如果需要水平垂直居中，可以加上这个 */
+            margin-right: 10px;
+            color: #FFF;
+        }
+        .title{
+            background: #C1C1C1;
+            color: #4E4E4E;
+        }
+        .pd10{
+            padding: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left">
+        <h3>YYNB - 对内娱乐赛</h3>
+        <table id="tables">
+        </table>
+    </div>
+    <div class="right">
+        <div id="main">
+            <h3 style="text-align: center">随机分组</h3>
+            <div class="pd10">
+                <span>分组类型：</span>
+                <label><input type="radio" name="groupSize" value=2>2人组</label>
+
+                <label><input type="radio" name="groupSize" value=3>3人组</label>
+            </div>
+            <div>
+                <span>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  &nbsp;  &nbsp; </span>
+                <label><input type="radio" name="groupSize" value=4 checked>4人组</label>
+
+                <label><input type="radio" name="groupSize" value=0>团队赛(分2组)</label>
+            </div>
+
+            <div class="pd10">
+                <label for="peopleCount">输入人数：</label>
+                <input type="number" id="peopleCount" value="10">
+                <div>
+                    <span>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  &nbsp;  &nbsp; </span>
+                    <span style="color: #999;font-size: 12px">复制报名人员时, 人数不需要手动输入</span>
+                </div>
+            </div>
+            <div class="pd10">
+                <label for="content" style="vertical-align: top">报名人员：</label>
+                <textarea id="content" rows="5" cols="40" placeholder="昵称    板凳号     YY号
+清 茶    1    423336
+=============================
+(复制板凳结果到这里)"></textarea>
+
+
+            </div>
+            <div style="padding-left: 80px;">
+                <button onclick="generateGroups()">生成分组</button>
+                <button onclick="copyRes()">复制结果</button>
+                <button onclick="clearContent()">清除报名人员</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="popup">
+    <p id="res">复制成功</p>
+    <button id="close-popup" onclick="closePopup(0)">关闭弹窗(3)</button>
+</div>
+<script>
+    const peopleCountElement = document.getElementById('peopleCount');
+    const contentElement = document.getElementById('content');
+
+    let peopleArr = [];
+    let res = "";
+    const tables = document.getElementById('tables');
+    function buildTitle(team){
+        return '<div class="title">'+ (team ? '<span>'+team+'</span> TEAM #'+team : "")+"</div>\n";
+    }
+    function buildPeople(people){
+        return '<div>&nbsp; &nbsp;'+people+"</div>\n";
+    }
+    //生成分组
+    function generateGroups() {
+        peopleArr = [];
+        const content = contentElement.value.trim();
+        if (content !== ""){
+            const arr = content.split('\n').slice(1);
+            peopleCountElement.value = arr.length;
+            arr.forEach(item=>{
+                //去掉yy号
+                let lastIndex = item.lastIndexOf(" ");
+                item= item.substring(0, lastIndex).trim();
+
+                //去掉板凳号
+                lastIndex = item.lastIndexOf(" ");
+                item= item.substring(0, lastIndex).trim();
+
+                peopleArr.push(item);
+            })
+        }else{
+            for (let i = 1; i <= peopleCountElement.value; i++) {
+                peopleArr.push(i);
+            }
+        }
+        let groupSize = parseInt(document.querySelector('input[name="groupSize"]:checked').value); //每组成员数量
+        let groupCount = Math.ceil(peopleCountElement.value / groupSize);
+        if(groupSize === 0){
+            groupCount = 2;
+            groupSize = Math.ceil(peopleCountElement.value / groupCount);
+        }
+        console.log("分组成员", peopleArr);
+        console.log(`共计${groupCount}组, 每组 ${groupSize} 人, 合计 ${peopleCountElement.value}人`);
+
+        let diff = groupCount * groupSize - peopleCountElement.value; //差的人数
+        //打乱顺序
+        shuffleArray(peopleArr);
+
+        let tr,td;
+
+
+        let index = 0;
+        tables.innerHTML = res = "";
+        let teamCount = groupCount;
+        if (groupCount%5 > 0){
+            teamCount = teamCount + 5 - groupCount%5;
+        }
+        for (let team = 1; team <= teamCount; team++) {
+            if (team%5 === 1){
+                tr = document.createElement('tr');
+            }
+            td = document.createElement('td');
+            let textContent;
+            if(peopleArr[index]){
+                textContent = buildTitle(team);
+                res += `TEAM #${team} : `;
+            }else{
+                textContent = buildTitle("");
+            }
+            let arr = [];
+            for (let size = 1; size <= groupSize; size++) {
+                if (groupCount - team < diff && groupSize === size){
+                    textContent+= buildPeople("");
+                    continue;
+                }
+                if (peopleArr[index]){
+                    textContent += buildPeople(peopleArr[index]);
+                    arr.push(peopleArr[index])
+                }else{
+                    textContent += buildPeople("");
+                }
+
+                index++;
+            }
+            if (arr.length > 0){
+                res += arr.join("、") + "\n";
+            }
+            td.innerHTML = textContent;
+            tr.appendChild(td);
+            if (team%5 === 0 || team === groupCount){
+                tables.appendChild(tr);
+            }
+        }
+    }
+
+    //分组
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    //清除报名人员
+    function clearContent() {
+        document.querySelector('#content').value = '';
+    }
+
+    //复制结果到粘贴板
+    function copyRes(){
+        if (res === ""){
+            return;
+        }
+        navigator.clipboard.writeText(res)
+            .then(() => {
+                alertDiv("复制成功");
+            })
+            .catch(err => {
+                alertDiv("复制失败");
+            });
+        // 在3秒后关闭警告框
+        setTimeout(function(){
+            document.querySelector('.alert').style.display = 'none';
+        }, 1500);
+    }
+
+    //打开弹窗提示
+    function alertDiv(msg){
+        document.querySelector('.popup').style.display = "inline-block";
+        document.getElementById("res").textContent = msg;
+        closePopup(3);
+    }
+
+    //关闭弹窗
+    function closePopup(count){
+        count--;
+        document.getElementById("close-popup").textContent = `关闭弹窗(${count})`;
+        if (count > 0){
+            setTimeout(function(){closePopup(count)}, 1000);
+        }else{
+            document.querySelector('.popup').style.display = "none";
+        }
+    }
+</script>
+</body>
+</html>
